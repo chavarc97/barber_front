@@ -22,9 +22,11 @@ export default function Services() {
   }, [isAuthenticated]);
   const fetchServices = async () => {
     try {
-      const data = await api.get<Service[]>('services/', false);
+      const data = await api.get<Service[] | { results: Service[] }>('services/', false);
       console.log(data);
-      setServices(data);
+      // Handle both array response and paginated response
+      const servicesArray = Array.isArray(data) ? data : data.results || [];
+      setServices(servicesArray);
     } catch (err) {
       setError('Failed to load services');
       console.error(err);

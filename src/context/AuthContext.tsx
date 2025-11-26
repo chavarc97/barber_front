@@ -9,6 +9,7 @@ interface AuthContextType {
   login: (username: string, password: string) => Promise<void>;
   signup: (username: string, email: string, password: string, phone: string) => Promise<void>;
   logout: () => void;
+  refreshUser: () => Promise<void>;
   isAuthenticated: boolean;
 }
 
@@ -24,6 +25,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const checkAuth = async () => {
     const token = localStorage.getItem('access_token');
+    
+    // If no token exists, don't make the API call
     if (!token) {
       setLoading(false);
       return;
@@ -32,10 +35,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const profile = await api.get<UserProfile>('profiles/me/');
       setUser(profile);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Auth check failed:', error);
+      
+      // Log more details for debugging
+      console.log('Token exists:', !!token);
+      console.log('Error details:', error.message);
+      
+      // Clear invalid or expired tokens
       localStorage.removeItem('access_token');
       localStorage.removeItem('refresh_token');
+      setUser(null);
     } finally {
       setLoading(false);
     }
@@ -43,7 +53,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = async (username: string, password: string) => {
     const response = await api.post<{ access: string; refresh: string; user: UserProfile }>(
-      'auth/login/',
+      'login/',
       { username, password },
       false
     );
@@ -55,7 +65,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signup = async (username: string, email: string, password: string, phone: string) => {
     const response = await api.post<{ access: string; refresh: string; user: UserProfile }>(
-      'auth/register/',
+      'register/',
       { username, email, password, phone_number: phone },
       false
     );
@@ -71,6 +81,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
   };
 
+  const refreshUser = async () => {
+    await checkAuth();
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -79,6 +93,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         login,
         signup,
         logout,
+        refreshUser,
         isAuthenticated: !!user,
       }}
     >

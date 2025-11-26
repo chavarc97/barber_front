@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { LogIn } from 'lucide-react';
+// import GoogleSignInButton from '../../components/GoogleSignInButton/GoogleSignInButton';
 
 export default function Login() {
   const [username, setUsername] = useState('');
@@ -77,6 +78,9 @@ export default function Login() {
             className="w-full bg-blue-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {loading ? 'Signing in...' : 'Sign In'}
+          </button>
+          <button>
+
           </button>
         </form>
 

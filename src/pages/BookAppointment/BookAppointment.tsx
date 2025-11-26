@@ -43,8 +43,9 @@ export default function BookAppointment() {
 
   const fetchServices = async () => {
     try {
-      const data = await api.get<Service[]>("services/", false);
-      setServices(data);
+      const data = await api.get<Service[] | { results: Service[] }>("services/", false);
+      const servicesArray = Array.isArray(data) ? data : data.results || [];
+      setServices(servicesArray);
     } catch (err) {
       console.error("Failed to load services", err);
     }
@@ -52,8 +53,9 @@ export default function BookAppointment() {
 
   const fetchBarbers = async () => {
     try {
-      const data = await api.get<UserProfile[]>("profiles/barbers/");
-      setBarbers(data);
+      const data = await api.get<UserProfile[] | { results: UserProfile[] }>("profiles/barbers/");
+      const barbersArray = Array.isArray(data) ? data : data.results || [];
+      setBarbers(barbersArray);
     } catch (err) {
       console.error("Failed to load barbers", err);
     }
