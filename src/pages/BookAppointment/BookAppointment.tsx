@@ -31,7 +31,7 @@ export default function BookAppointment() {
     fetchServices();
     fetchBarbers();
 
-    console.log(selectedBarber);
+
 
 
     const params = new URLSearchParams(window.location.search);
@@ -61,6 +61,7 @@ export default function BookAppointment() {
       console.error("Failed to load barbers", err);
     }
   };
+
 
   const checkAvailability = async () => {
     if (!selectedBarber || !appointmentDate || !appointmentTime) {
