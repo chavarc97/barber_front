@@ -4,15 +4,7 @@ import { Calendar, Scissors, Star, Clock } from 'lucide-react';
 export default function Home() {
   const { isAuthenticated } = useAuth();
 
-  if (!isAuthenticated) {
-    return (
-      <div className="">
-        <h1>
-          Error 403: You must be logged in to access this page.
-        </h1>
-      </div>
-    )
-  }
+
 
 
   return (

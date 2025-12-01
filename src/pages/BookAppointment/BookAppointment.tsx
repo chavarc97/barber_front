@@ -31,7 +31,8 @@ export default function BookAppointment() {
     fetchServices();
     fetchBarbers();
 
-    console.log(user?.user.id);
+    console.log(selectedBarber);
+
 
     const params = new URLSearchParams(window.location.search);
     const serviceId = params.get("service");
@@ -39,7 +40,7 @@ export default function BookAppointment() {
 
     if (serviceId) setSelectedService(parseInt(serviceId));
     if (barberId) setSelectedBarber(parseInt(barberId));
-  }, []);
+  }, [isAuthenticated]);
 
   const fetchServices = async () => {
     try {
@@ -101,7 +102,7 @@ export default function BookAppointment() {
       }, 500);
       return () => clearTimeout(timeoutId);
     }
-  }, [selectedBarber, appointmentDate, appointmentTime]);
+  }, [selectedBarber, appointmentDate, appointmentTime, selectedService]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -118,10 +119,11 @@ export default function BookAppointment() {
     const datetime = `${appointmentDate}T${appointmentTime}:00`;
 
     try {
+      // Send the correct field names that match the serializer
       await api.post("appointments/", {
+        client_id: user?.user.id,
         barber_id: selectedBarber,
         service_id: selectedService,
-        client_id: user?.user.id,
         appointment_datetime: datetime,
         duration_minutes: service?.duration_minutes || 30,
         notes,
@@ -132,6 +134,7 @@ export default function BookAppointment() {
         window.location.href = "/appointments";
       }, 2000);
     } catch (err) {
+      console.error("Booking error:", err);
       setError(
         err instanceof Error ? err.message : "Failed to book appointment"
       );

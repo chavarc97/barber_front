@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { LogIn } from 'lucide-react';
+import GoogleSignInButton from '../../components/GoogleSignInButton/GoogleSignInButton';
 // import GoogleSignInButton from '../../components/GoogleSignInButton/GoogleSignInButton';
 
 export default function Login() {
@@ -80,7 +81,7 @@ export default function Login() {
             {loading ? 'Signing in...' : 'Sign In'}
           </button>
           <button>
-
+            <GoogleSignInButton />
           </button>
         </form>
 

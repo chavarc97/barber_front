@@ -1,28 +1,37 @@
-// client/barber-front/src/components/GoogleSignInButton.tsx
 import { useEffect } from 'react';
 import { api } from '../../lib/api';
 
 declare global {
-  interface Window { google: any; }
+  interface Window {
+    google: any;
+  }
 }
 
 type Role = 'client' | 'barber';
 
 interface Props {
-  /** role to register as when creating a new user; defaults to env `VITE_DEFAULT_ROLE` or `client` */
+  /** Role to register as when creating a new user */
   role?: Role;
-  /** optional callback invoked with backend response on success */
+  /** Optional callback invoked with backend response on success */
   onSuccess?: (data: any) => void;
+  /** Optional callback for errors */
+  onError?: (error: string) => void;
 }
 
-export default function GoogleSignInButton({ role: propRole, onSuccess }: Props) {
+export default function GoogleSignInButton({ 
+  role: propRole, 
+  onSuccess,
+  onError 
+}: Props) {
   useEffect(() => {
     const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+    
     if (!clientId) {
       console.warn('VITE_GOOGLE_CLIENT_ID is not set');
       return;
     }
 
+    // Load Google Sign-In script
     const script = document.createElement('script');
     script.src = 'https://accounts.google.com/gsi/client';
     script.async = true;
@@ -30,47 +39,97 @@ export default function GoogleSignInButton({ role: propRole, onSuccess }: Props)
     document.body.appendChild(script);
 
     script.onload = () => {
-      window.google?.accounts?.id.initialize({
-        client_id: clientId,
-        callback: handleCredentialResponse,
-        ux_mode: 'popup',
-      });
+      if (window.google?.accounts?.id) {
+        window.google.accounts.id.initialize({
+          client_id: clientId,
+          callback: handleCredentialResponse,
+          ux_mode: 'popup',
+          auto_select: false,
+        });
 
-      const container = document.getElementById('g_id_signin');
-      if (container) {
-        window.google.accounts.id.renderButton(container, { theme: 'outline', size: 'large' });
+        // Render the button
+        const container = document.getElementById('g_id_signin');
+        if (container) {
+          window.google.accounts.id.renderButton(container, {
+            theme: 'outline',
+            size: 'large',
+            width: '100%',
+            text: 'signin_with',
+            shape: 'rectangular',
+          });
+        }
+      }
+    };
+
+    script.onerror = () => {
+      console.error('Failed to load Google Sign-In script');
+      if (onError) {
+        onError('Failed to load Google Sign-In');
       }
     };
 
     return () => {
-      try { document.body.removeChild(script); } catch (e) { /* ignore */ }
+      try {
+        document.body.removeChild(script);
+      } catch (e) {
+        // Script already removed
+      }
     };
   }, []);
 
   const handleCredentialResponse = async (response: any) => {
     const idToken = response?.credential;
-    if (!idToken) return;
+    
+    if (!idToken) {
+      console.error('No credential in response');
+      if (onError) {
+        onError('No credential received from Google');
+      }
+      return;
+    }
 
-    // backend endpoint and role configuration
-    const endpoint = import.meta.env.VITE_GOOGLE_ENDPOINT || 'google/'; // appended to API base URL from `api`
+    // Backend endpoint and role configuration
+    const endpoint = import.meta.env.VITE_GOOGLE_ENDPOINT || 'google/';
     const defaultRole = (import.meta.env.VITE_DEFAULT_ROLE as Role) || 'client';
     const role: Role = propRole || defaultRole;
 
     try {
-      // use api helper (no auth required for login)
-      const data = await api.post<any>(endpoint, { id_token: idToken, role }, false);
+      // Call backend API (no auth required for login)
+      const data = await api.post<any>(
+        endpoint,
+        { id_token: idToken, role },
+        false // requiresAuth = false
+      );
 
-      // store tokens
-      if (data.access) localStorage.setItem('access_token', data.access);
-      if (data.refresh) localStorage.setItem('refresh_token', data.refresh);
+      // Store tokens in localStorage
+      if (data.access) {
+        localStorage.setItem('access_token', data.access);
+      }
+      if (data.refresh) {
+        localStorage.setItem('refresh_token', data.refresh);
+      }
 
-      if (onSuccess) onSuccess(data);
-      else window.location.reload();
+      // Call success callback or reload page
+      if (onSuccess) {
+        onSuccess(data);
+      } else {
+        window.location.href = '/';
+      }
     } catch (err: any) {
-      console.error('Google login error', err.message || err);
-      alert('Google login failed');
+      console.error('Google login error:', err.message || err);
+      const errorMessage = err.message || 'Google login failed';
+      
+      if (onError) {
+        onError(errorMessage);
+      } else {
+        alert(errorMessage);
+      }
     }
   };
 
-  return <div id="g_id_signin" />;
+  return (
+    <div className="w-full">
+      <div id="g_id_signin" className="w-full"></div>
+    </div>
+  );
 }
