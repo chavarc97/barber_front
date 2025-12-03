@@ -44,6 +44,15 @@ export default function Navbar() {
                   <Calendar className="w-4 h-4" />
                   <span>My Appointments</span>
                 </a>
+                {user?.role === 'barber' && (
+                  <a
+                    href="/barber-appointments"
+                    className="flex items-center space-x-1 text-gray-700 hover:text-blue-600 transition"
+                  >
+                    <Calendar className="w-4 h-4" />
+                    <span>Mis Citas</span>
+                  </a>
+                )}
               </div>
             )}
           </div>

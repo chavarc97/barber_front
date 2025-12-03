@@ -1,92 +1,91 @@
 import { useEffect, useState } from 'react';
 import { api } from '../../lib/api';
 import type { Appointment } from '../../types';
-import { Calendar, Clock, User, XCircle, Edit, Star } from 'lucide-react';
-import RatingModal from '../../components/RatingModal/RatingModal';
-import RescheduleModal from '../../components/RescheduleModal/RescheduleModal';
+import { Calendar, Clock, User, CheckCircle, XCircle } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
-export default function MyAppointments() {
+export default function BarberAppointments() {
   const [upcomingAppointments, setUpcomingAppointments] = useState<Appointment[]>([]);
-  const [pastAppointments, setPastAppointments] = useState<Appointment[]>([]);
+  const [completedAppointments, setCompletedAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'upcoming' | 'history'>('upcoming');
-  const [selectedForRating, setSelectedForRating] = useState<Appointment | null>(null);
-  const [selectedForReschedule, setSelectedForReschedule] = useState<Appointment | null>(null);
+  const [activeTab, setActiveTab] = useState<'upcoming' | 'completed'>('upcoming');
   const [error, setError] = useState('');
-  const [ratedAppointments, setRatedAppointments] = useState<Set<number>>(new Set());
-  const { isAuthenticated } = useAuth();
+  const { user, isAuthenticated } = useAuth();
 
   useEffect(() => {
-    // Wait for auth check to complete. Only fetch appointments when authenticated.
+    // Verificar que el usuario esté autenticado y sea barbero
     if (isAuthenticated) {
-      setLoading(false);
-      setUpcomingAppointments([]);
-      setPastAppointments([]);
+      if (user?.role !== 'barber') {
+        window.location.href = '/';
+        return;
+      }
       fetchAppointments();
-      fetchMyRatings();
-      
-      return;
     } else {
       setLoading(false);
-      // Redirect to login page
       window.location.href = '/login';
     }
-    
-    
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isAuthenticated]);
+  }, [isAuthenticated, user]);
+
   const fetchAppointments = async () => {
     setLoading(true);
     try {
-      const [upcoming, history] = await Promise.all([
-        api.get<Appointment[]>('/appointments/upcoming/'),
-        api.get<Appointment[]>('/appointments/history/'),
-      ]);
+      // Obtener todas las citas
+      const response = await api.get<Appointment[] | { results: Appointment[] }>('/appointments/');
+      
+      // Manejar tanto arrays directos como objetos con propiedad results
+      const allAppointments = Array.isArray(response) ? response : response.results || [];
+      
+      // Filtrar las citas donde el usuario actual es el barbero
+      const myAppointments = allAppointments.filter(
+        (apt) => apt.barber === user?.user.id
+      );
+
+      // Separar en upcoming (booked) y completed
+      const upcoming = myAppointments.filter((apt) => apt.status === 'booked');
+      const completed = myAppointments.filter((apt) => apt.status === 'completed');
 
       setUpcomingAppointments(upcoming);
-      setPastAppointments(history);
-      
+      setCompletedAppointments(completed);
     } catch (err) {
       setError('Failed to load appointments');
-      console.error(err);
+      console.error('Error fetching appointments:', err);
     } finally {
       setLoading(false);
     }
   };
 
-  const fetchMyRatings = async () => {
+  const handleCompleteAppointment = async (appointmentId: number) => {
+    if (!confirm('¿Estás seguro de que quieres marcar esta cita como completada?')) {
+      return;
+    }
+
     try {
-      const myRatings = await api.get<any[]>('/ratings/my_ratings/');
-      const ids = new Set<number>();
-      if (Array.isArray(myRatings)) {
-        myRatings.forEach((r) => {
-          const appt = r.appointment ?? r.appointment_id ?? (r.appointment && (r.appointment.id ?? r.appointment));
-          if (typeof appt === 'number') ids.add(appt);
-          else if (appt && typeof appt === 'object' && typeof appt.id === 'number') ids.add(appt.id);
-        });
-      }
-      setRatedAppointments(ids);
+      await api.patch(`/appointments/${appointmentId}/complete/`);
+
+      // Actualizar la lista de citas
+      await fetchAppointments();
+
+      alert('Cita marcada como completada exitosamente');
     } catch (err) {
-      console.error('Failed to fetch my ratings', err);
+      alert(err instanceof Error ? err.message : 'Failed to complete appointment');
     }
   };
 
   const handleCancelAppointment = async (appointmentId: number) => {
-    if (!confirm('Are you sure you want to cancel this appointment?')) {
+    if (!confirm('¿Estás seguro de que quieres cancelar esta cita?')) {
       return;
     }
 
     try {
       await api.patch(`/appointments/${appointmentId}/cancel/`, {
-        reason: 'Canceled by client',
+        reason: 'Canceled by barber',
       });
 
-      setUpcomingAppointments((prev) =>
-        prev.filter((apt) => apt.id !== appointmentId)
-      );
+      // Actualizar la lista de citas
+      await fetchAppointments();
 
-      alert('Appointment canceled successfully');
+      alert('Cita cancelada exitosamente');
     } catch (err) {
       alert(err instanceof Error ? err.message : 'Failed to cancel appointment');
     }
@@ -95,13 +94,13 @@ export default function MyAppointments() {
   const formatDateTime = (datetime: string) => {
     const date = new Date(datetime);
     return {
-      date: date.toLocaleDateString('en-US', {
+      date: date.toLocaleDateString('es-ES', {
         weekday: 'short',
         year: 'numeric',
         month: 'short',
         day: 'numeric',
       }),
-      time: date.toLocaleTimeString('en-US', {
+      time: date.toLocaleTimeString('es-ES', {
         hour: '2-digit',
         minute: '2-digit',
       }),
@@ -143,15 +142,15 @@ export default function MyAppointments() {
           <div className="flex items-center space-x-3 text-gray-700">
             <User className="w-5 h-5 text-blue-600" />
             <div>
-              <p className="text-sm text-gray-500">Barber</p>
-              <p className="font-medium">{appointment.barber_name}</p>
+              <p className="text-sm text-gray-500">Cliente</p>
+              <p className="font-medium">{appointment.client_name}</p>
             </div>
           </div>
 
           <div className="flex items-center space-x-3 text-gray-700">
             <Calendar className="w-5 h-5 text-blue-600" />
             <div>
-              <p className="text-sm text-gray-500">Date</p>
+              <p className="text-sm text-gray-500">Fecha</p>
               <p className="font-medium">{date}</p>
             </div>
           </div>
@@ -159,7 +158,7 @@ export default function MyAppointments() {
           <div className="flex items-center space-x-3 text-gray-700">
             <Clock className="w-5 h-5 text-blue-600" />
             <div>
-              <p className="text-sm text-gray-500">Time</p>
+              <p className="text-sm text-gray-500">Hora</p>
               <p className="font-medium">
                 {time} ({appointment.duration_minutes} mins)
               </p>
@@ -175,35 +174,21 @@ export default function MyAppointments() {
         {appointment.status === 'booked' && (
           <div className="flex space-x-3 mt-4">
             <button
-              onClick={() => setSelectedForReschedule(appointment)}
-              className="flex-1 flex items-center justify-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+              onClick={() => handleCompleteAppointment(appointment.id)}
+              className="flex-1 flex items-center justify-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition"
             >
-              <Edit className="w-4 h-4" />
-              <span>Reschedule</span>
+              <CheckCircle className="w-4 h-4" />
+              <span>Marcar como Completada</span>
             </button>
             <button
               onClick={() => handleCancelAppointment(appointment.id)}
               className="flex-1 flex items-center justify-center space-x-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition"
             >
               <XCircle className="w-4 h-4" />
-              <span>Cancel</span>
+              <span>Cancelar</span>
             </button>
           </div>
         )}
-
-        {appointment.status === 'completed' && (() => {
-          const isRated = ratedAppointments.has(appointment.id);
-          return (
-            <button
-              onClick={() => !isRated && setSelectedForRating(appointment)}
-              disabled={isRated}
-              className={`w-full flex items-center justify-center space-x-2 px-4 py-2 mt-4 rounded-lg transition ${isRated ? 'bg-gray-200 text-gray-600 cursor-not-allowed' : 'bg-yellow-500 text-white hover:bg-yellow-600'}`}
-            >
-              <Star className="w-4 h-4" />
-              <span>{isRated ? 'Already Rated' : 'Rate Service'}</span>
-            </button>
-          );
-        })()}
       </div>
     );
   };
@@ -224,13 +209,13 @@ export default function MyAppointments() {
     );
   }
 
-  const displayAppointments = activeTab === 'upcoming' ? upcomingAppointments : pastAppointments;
+  const displayAppointments = activeTab === 'upcoming' ? upcomingAppointments : completedAppointments;
 
   return (
     <div className="space-y-6">
       <div className="bg-white rounded-xl shadow-md p-6">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">My Appointments</h1>
-        <p className="text-gray-600">Manage your upcoming and past appointments</p>
+        <h1 className="text-3xl font-bold text-gray-900 mb-2">Mis Citas como Barbero</h1>
+        <p className="text-gray-600">Gestiona tus citas y marca las completadas</p>
       </div>
 
       <div className="bg-white rounded-xl shadow-md p-2">
@@ -243,17 +228,17 @@ export default function MyAppointments() {
                 : 'text-gray-700 hover:bg-gray-100'
             }`}
           >
-            Upcoming ({upcomingAppointments.length})
+            Próximas Citas ({upcomingAppointments.length})
           </button>
           <button
-            onClick={() => setActiveTab('history')}
+            onClick={() => setActiveTab('completed')}
             className={`flex-1 py-3 px-4 rounded-lg font-medium transition ${
-              activeTab === 'history'
+              activeTab === 'completed'
                 ? 'bg-blue-600 text-white'
                 : 'text-gray-700 hover:bg-gray-100'
             }`}
           >
-            History ({pastAppointments.length})
+            Completadas ({completedAppointments.length})
           </button>
         </div>
       </div>
@@ -268,45 +253,14 @@ export default function MyAppointments() {
         <div className="bg-gray-100 rounded-xl p-12 text-center">
           <Calendar className="w-16 h-16 text-gray-400 mx-auto mb-4" />
           <h3 className="text-xl font-semibold text-gray-700 mb-2">
-            {activeTab === 'upcoming' ? 'No upcoming appointments' : 'No past appointments'}
+            {activeTab === 'upcoming' ? 'No hay citas próximas' : 'No hay citas completadas'}
           </h3>
-          <p className="text-gray-500 mb-4">
+          <p className="text-gray-500">
             {activeTab === 'upcoming'
-              ? 'Book your first appointment to get started'
-              : 'Your appointment history will appear here'}
+              ? 'Las citas reservadas aparecerán aquí'
+              : 'Tu historial de citas completadas aparecerá aquí'}
           </p>
-          {activeTab === 'upcoming' && (
-            <a
-              href="/services"
-              className="inline-block px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
-            >
-              Book Appointment
-            </a>
-          )}
         </div>
-      )}
-
-      {selectedForRating && (
-        <RatingModal
-          appointment={selectedForRating}
-          onClose={() => setSelectedForRating(null)}
-          onSuccess={() => {
-            setSelectedForRating(null);
-            fetchAppointments();
-            fetchMyRatings();
-          }}
-        />
-      )}
-
-      {selectedForReschedule && (
-        <RescheduleModal
-          appointment={selectedForReschedule}
-          onClose={() => setSelectedForReschedule(null)}
-          onSuccess={() => {
-            setSelectedForReschedule(null);
-            fetchAppointments();
-          }}
-        />
       )}
     </div>
   );

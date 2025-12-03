@@ -8,6 +8,7 @@ import Services from './pages/ServicesPage/Services';
 import Barbers from './pages/BarbersPage/Barbers';
 import BookAppointment from './pages/BookAppointment/BookAppointment';
 import MyAppointments from './pages/MyAppointments/MyAppointments';
+import BarberAppointments from './pages/BarberAppointments/BarberAppointments';
 
 function Router() {
   const [currentPath, setCurrentPath] = useState(window.location.pathname);
@@ -61,7 +62,8 @@ function Router() {
       {currentPath === '/barbers' && <Barbers />}
       {currentPath === '/book' && <BookAppointment />}
       {currentPath === '/appointments' && <MyAppointments />}
-      {!['/','/ services', '/barbers', '/book', '/appointments'].includes(currentPath) && <Home />}
+      {currentPath === '/barber-appointments' && <BarberAppointments />}
+      {!['/','/ services', '/barbers', '/book', '/appointments', '/barber-appointments'].includes(currentPath) && <Home />}
     </Layout>
   );
 }

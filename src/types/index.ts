@@ -37,14 +37,16 @@ export interface BarberSchedule {
 
 export interface Appointment {
   id: number;
-  client: User;
-  barber: User;
+  client: number;
+  client_name: string;
+  barber: number;
+  barber_name: string;
+  service: number;
+  service_name: string;
   appointment_datetime: string;
   duration_minutes: number;
   status: 'booked' | 'completed' | 'canceled';
-  notes: string;
   created_at: string;
-  active: boolean;
 }
 
 export interface Rating {
