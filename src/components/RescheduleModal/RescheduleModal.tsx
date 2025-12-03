@@ -31,7 +31,7 @@ export default function RescheduleModal({
     try {
       const datetime = `${newDate}T${newTime}:00`;
       const result = await api.post<AvailabilityCheck>('/appointments/check_availability/', {
-        barber_id: appointment.barber.id,
+        barber_id: appointment.barber,
         appointment_datetime: datetime,
         duration_minutes: appointment.duration_minutes,
       });
@@ -112,11 +112,7 @@ export default function RescheduleModal({
           </div>
           <div>
             <p className="text-sm text-gray-600">Barber</p>
-            <p className="font-semibold text-gray-900">
-              {appointment.barber.first_name && appointment.barber.last_name
-                ? `${appointment.barber.first_name} ${appointment.barber.last_name}`
-                : appointment.barber.username}
-            </p>
+            <p className="font-semibold text-gray-900">{appointment.barber_name}</p>
           </div>
         </div>
 

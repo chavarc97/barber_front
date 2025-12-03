@@ -83,11 +83,7 @@ export default function RatingModal({ appointment, onClose, onSuccess }: RatingM
 
         <div className="mb-6 p-4 bg-gray-50 rounded-lg">
           <p className="text-sm text-gray-600 mb-1">Barber</p>
-          <p className="font-semibold text-gray-900">
-            {appointment.barber.first_name && appointment.barber.last_name
-              ? `${appointment.barber.first_name} ${appointment.barber.last_name}`
-              : appointment.barber.username}
-          </p>
+          <p className="font-semibold text-gray-900">{appointment.barber_name}</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
